@@ -1,0 +1,5 @@
+{
+  "name": "Tender Tasks",
+  "description": "A dark-themed task management board to visualize and organize tasks in columns like To-Do, In Progress, and Not Started. Features include drag-and-drop functionality and a detailed task view with comments.",
+  "requestFramePermissions": []
+}
