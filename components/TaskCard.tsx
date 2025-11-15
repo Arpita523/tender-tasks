@@ -1,11 +1,11 @@
-import React from 'react';
-// FIX: Import `Priority` as a value because it is an enum used at runtime, while importing `Task` as a type.
+import React, { useState, useRef, useEffect } from 'react';
 import { type Task, Priority } from '../types';
 import { CalendarIcon, ChatAltIcon, PaperClipIcon, DotsHorizontalIcon } from './icons';
 
 interface TaskCardProps {
   task: Task;
   onSelectTask: (task: Task) => void;
+  onRemoveTask: (taskId: string) => void;
 }
 
 const statusStyles: Record<string, string> = {
@@ -21,17 +21,43 @@ const priorityStyles: Record<Priority, string> = {
   [Priority.High]: 'bg-red-800/80 text-red-300',
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onSelectTask }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onSelectTask, onRemoveTask }) => {
   const { title, description, assignee, dueDate, commentsCount, attachmentsCount, status, priority } = task;
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Sets the task ID in the data transfer object when a drag operation starts.
-   * This ID is used by the Column component to identify which task is being moved.
+   * Effect to handle clicks outside of the dropdown menu to close it.
+   * This provides a better user experience.
+   */
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  /**
+   * Handles starting the drag operation for a task card.
    */
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('taskId', task.id);
   };
   
+  /**
+   * Handles the remove action, ensuring the menu closes.
+   */
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onRemoveTask(task.id);
+  }
+
   return (
     <div
       draggable
@@ -43,12 +69,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onSelectTask }) => {
         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusStyles[status]}`}>
           {status}
         </span>
-        <button className="text-gray-500 hover:text-white">
-          <DotsHorizontalIcon className="h-5 w-5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(prev => !prev);
+            }} 
+            className="text-gray-500 hover:text-white p-1 rounded-full hover:bg-gray-600"
+            aria-haspopup="true"
+            aria-expanded={isMenuOpen}
+          >
+            <DotsHorizontalIcon className="h-5 w-5" />
+          </button>
+          {isMenuOpen && (
+            <div className="absolute top-full right-0 mt-1 bg-[#2a3038] border border-gray-600 rounded-md shadow-lg z-10 w-28">
+              <button 
+                onClick={handleRemove}
+                className="block w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/50 rounded-md"
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <h3 className="font-bold text-white mb-1">{title}</h3>
-      <p className="text-sm text-gray-400 mb-4">{description}</p>
+      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{description}</p>
       <div className="flex justify-between items-center mb-4">
         <div>
           <p className="text-xs text-gray-500 mb-1">Assignee</p>
@@ -64,7 +110,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onSelectTask }) => {
       <div className="border-t border-gray-700 pt-3 flex justify-between items-center text-gray-500 text-sm">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-4 w-4" />
-          <span>{new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <span>{new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">

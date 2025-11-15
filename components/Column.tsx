@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { TaskCard } from './TaskCard';
 import { PlusIcon, DotsHorizontalIcon } from './icons';
@@ -9,14 +8,15 @@ interface ColumnProps {
   tasks: Task[];
   onMoveTask: (taskId: string, newColumn: ColumnId) => void;
   onSelectTask: (task: Task) => void;
+  onRemoveTask: (taskId: string) => void;
+  onOpenAddTaskModal: (columnId: ColumnId) => void;
 }
 
-export const Column: React.FC<ColumnProps> = ({ column, tasks, onMoveTask, onSelectTask }) => {
+export const Column: React.FC<ColumnProps> = ({ column, tasks, onMoveTask, onSelectTask, onRemoveTask, onOpenAddTaskModal }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   /**
-   * Handles the drop event. It retrieves the task ID from the data transfer,
-   * calls the onMoveTask function to update the task's state, and resets the drag-over styling.
+   * Handles the drop event for drag-and-drop functionality.
    */
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -27,9 +27,6 @@ export const Column: React.FC<ColumnProps> = ({ column, tasks, onMoveTask, onSel
     setIsDragOver(false);
   };
   
-  /**
-   * Prevents the default behavior for dragover to allow dropping.
-   */
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -44,7 +41,7 @@ export const Column: React.FC<ColumnProps> = ({ column, tasks, onMoveTask, onSel
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      className={`flex flex-col bg-[#161B22] rounded-lg h-full transition-colors ${isDragOver ? 'bg-gray-700' : ''}`}
+      className={`flex flex-col bg-[#161B22] rounded-lg h-full transition-colors ${isDragOver ? 'bg-gray-800/50' : ''}`}
     >
       <div className="p-4 flex justify-between items-center border-b border-gray-700">
         <div className="flex items-center gap-2">
@@ -55,7 +52,11 @@ export const Column: React.FC<ColumnProps> = ({ column, tasks, onMoveTask, onSel
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="text-gray-400 hover:text-white">
+          <button 
+            className="text-gray-400 hover:text-white"
+            onClick={() => onOpenAddTaskModal(column.id)}
+            aria-label={`Add task to ${column.title}`}
+          >
             <PlusIcon className="h-5 w-5" />
           </button>
           <button className="text-gray-400 hover:text-white">
@@ -65,8 +66,13 @@ export const Column: React.FC<ColumnProps> = ({ column, tasks, onMoveTask, onSel
       </div>
       <div className="p-4 flex-grow overflow-y-auto space-y-4 custom-scrollbar">
         {tasks.map(task => (
-          <TaskCard key={task.id} task={task} onSelectTask={onSelectTask} />
+          <TaskCard key={task.id} task={task} onSelectTask={onSelectTask} onRemoveTask={onRemoveTask} />
         ))}
+        {tasks.length === 0 && (
+          <div className="text-center text-gray-500 text-sm py-4">
+            Drag a card here to add it to this column.
+          </div>
+        )}
       </div>
     </div>
   );

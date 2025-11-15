@@ -1,4 +1,3 @@
-
 import { Task, ColumnId, Priority, ColumnType, Assignee, Comment } from '../types';
 
 export const assignees: Record<string, Assignee> = {
@@ -6,6 +5,7 @@ export const assignees: Record<string, Assignee> = {
   'user2': { id: 'user2', name: 'Mike Williams', avatarUrl: 'https://i.pravatar.cc/32?u=mike' },
   'user3': { id: 'user3', name: 'Jessica Brown', avatarUrl: 'https://i.pravatar.cc/32?u=jessica' },
   'user4': { id: 'user4', name: 'David Miller', avatarUrl: 'https://i.pravatar.cc/32?u=david' },
+  'user5': { id: 'user5', name: 'You', avatarUrl: 'https://i.pravatar.cc/32?u=you' },
 };
 
 const sampleComments: Comment[] = [
@@ -137,7 +137,7 @@ export const initialTasks: Task[] = [
 ];
 
 export const columns: ColumnType[] = [
-  { id: ColumnId.ToDo, title: 'To-Do List', color: 'bg-blue-500' },
+  { id: ColumnId.ToDo, title: 'To-Do List', color: 'bg-purple-500' },
   { id: ColumnId.InProgress, title: 'In Progress', color: 'bg-blue-500' },
   { id: ColumnId.NotStarted, title: 'Not Started', color: 'bg-orange-500' },
   { id: ColumnId.Completed, title: 'Completed', color: 'bg-green-500' },

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { Task, Comment } from '../types';
 import { XIcon, CalendarIcon, PaperClipIcon } from './icons';
@@ -8,6 +7,7 @@ interface TaskDetailModalProps {
   task: Task;
   onClose: () => void;
   onAddComment: (taskId: string, comment: Comment) => void;
+  onRemoveTask: (taskId: string) => void;
 }
 
 const statusStyles: Record<string, string> = {
@@ -24,15 +24,13 @@ const priorityStyles: Record<string, string> = {
 };
 
 
-export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose, onAddComment }) => {
+export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose, onAddComment, onRemoveTask }) => {
   const [newComment, setNewComment] = useState('');
-  // In a real app, current user would come from auth context
-  const currentUser = assignees['user4']; 
+  // In a real app, current user would come from auth context. Using user5 as 'You'.
+  const currentUser = assignees['user5']; 
 
   /**
    * Handles the submission of a new comment.
-   * It creates a new comment object and calls the onAddComment prop.
-   * It also clears the input field.
    */
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,9 +57,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
       >
         <header className="p-4 border-b border-gray-700 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white">{task.title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
-            <XIcon className="h-6 w-6" />
-          </button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => onRemoveTask(task.id)} 
+              className="text-gray-400 hover:text-red-400 text-sm font-semibold hover:bg-red-900/30 px-3 py-1 rounded-md transition-colors"
+            >
+              Delete
+            </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-white">
+              <XIcon className="h-6 w-6" />
+            </button>
+          </div>
         </header>
         
         <main className="p-6 overflow-y-auto custom-scrollbar flex-grow">
@@ -105,7 +111,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Comments</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">Comments ({task.commentsCount})</h3>
             <div className="space-y-4 max-h-48 overflow-y-auto custom-scrollbar pr-2">
               {task.comments.map(comment => (
                 <div key={comment.id} className="flex items-start gap-3">
@@ -119,6 +125,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                   </div>
                 </div>
               ))}
+              {task.comments.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">No comments yet.</p>
+              )}
             </div>
           </div>
         </main>

@@ -1,20 +1,24 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Board } from './components/Board';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { TaskDetailModal } from './components/TaskDetailModal';
+import { AddTaskModal } from './components/AddTaskModal';
+import { ListView } from './components/ListView';
 import { initialTasks } from './data/initialData';
 import type { Task, ColumnId, Comment } from './types';
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [isAddTaskModalOpen, setAddTaskModalOpen] = useState(false);
+  const [addingTaskToColumn, setAddingTaskToColumn] = useState<ColumnId | null>(null);
 
   /**
-   * Handles moving a task to a different column.
-   * This is the core logic for the drag-and-drop functionality.
-   * It finds the task by its ID and updates its status to the new column's ID.
+   * Handles moving a task to a different column (drag-and-drop).
    */
   const handleMoveTask = useCallback((taskId: string, newColumn: ColumnId) => {
     setTasks(prevTasks =>
@@ -25,52 +29,116 @@ const App: React.FC = () => {
   }, []);
 
   /**
-   * Handles opening the task detail modal.
-   * Sets the selected task in the state, which triggers the modal to appear.
+   * Opens the task detail modal.
    */
   const handleSelectTask = useCallback((task: Task) => {
     setSelectedTask(task);
   }, []);
 
   /**
-   * Handles closing the task detail modal.
-   * Resets the selected task state to null.
+   * Closes the task detail modal.
    */
   const handleCloseModal = useCallback(() => {
     setSelectedTask(null);
   }, []);
 
   /**
-   * Adds a new comment to a specific task.
-   * It updates the comments array for the given taskId.
+   * Adds a new comment to a task.
    */
   const handleAddComment = useCallback((taskId: string, comment: Comment) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
+    const updateTask = (task: Task) => 
         task.id === taskId
-          ? { ...task, comments: [...task.comments, comment] }
-          : task
-      )
-    );
-    // Also update the selected task to show the new comment immediately
+          ? { ...task, comments: [...task.comments, comment], commentsCount: task.comments.length + 1 }
+          : task;
+
+    setTasks(prevTasks => prevTasks.map(updateTask));
+    
     setSelectedTask(prevSelectedTask =>
-        prevSelectedTask && prevSelectedTask.id === taskId 
-        ? { ...prevSelectedTask, comments: [...prevSelectedTask.comments, comment] }
-        : prevSelectedTask
+        prevSelectedTask ? updateTask(prevSelectedTask) : null
     );
   }, []);
+  
+  /**
+   * Removes a task after user confirmation.
+   */
+  const handleRemoveTask = useCallback((taskId: string) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(null);
+      }
+    }
+  }, [selectedTask]);
+
+  /**
+   * Opens the "Add Task" modal for a specific column.
+   */
+  const handleOpenAddTaskModal = useCallback((columnId: ColumnId) => {
+    setAddingTaskToColumn(columnId);
+    setAddTaskModalOpen(true);
+  }, []);
+  
+  /**
+   * Closes the "Add Task" modal.
+   */
+  const handleCloseAddTaskModal = useCallback(() => {
+    setAddTaskModalOpen(false);
+    setAddingTaskToColumn(null);
+  }, []);
+  
+  /**
+   * Adds a new task to the list.
+   */
+  const handleAddTask = useCallback((newTaskData: Omit<Task, 'id' | 'commentsCount' | 'attachmentsCount' | 'comments'>) => {
+    const newTask: Task = {
+      ...newTaskData,
+      id: `task-${Date.now()}`,
+      commentsCount: 0,
+      attachmentsCount: 0,
+      comments: [],
+    };
+    setTasks(prevTasks => [newTask, ...prevTasks]);
+    handleCloseAddTaskModal();
+  }, [handleCloseAddTaskModal]);
+
+  /**
+   * Memoized filtering of tasks based on the search term.
+   * This improves performance by avoiding re-calculation on every render.
+   */
+  const filteredTasks = useMemo(() => {
+    if (!searchTerm) return tasks;
+    return tasks.filter(task =>
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [tasks, searchTerm]);
 
   return (
     <div className="flex h-screen w-full text-gray-300 bg-[#0D1117]">
       <Sidebar />
-      <div className="flex flex-col flex-grow">
-        <Header />
-        <main className="flex-grow p-4 md:p-6 overflow-x-auto">
-          <Board
-            tasks={tasks}
-            onMoveTask={handleMoveTask}
-            onSelectTask={handleSelectTask}
-          />
+      <div className="flex flex-col flex-grow min-w-0">
+        <Header 
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+        />
+        <main className="flex-grow p-4 md:p-6 overflow-auto custom-scrollbar">
+          {viewMode === 'board' ? (
+            <Board
+              tasks={filteredTasks}
+              onMoveTask={handleMoveTask}
+              onSelectTask={handleSelectTask}
+              onRemoveTask={handleRemoveTask}
+              onOpenAddTaskModal={handleOpenAddTaskModal}
+            />
+          ) : (
+            <ListView 
+              tasks={filteredTasks}
+              onSelectTask={handleSelectTask}
+              onRemoveTask={handleRemoveTask}
+            />
+          )}
         </main>
       </div>
       {selectedTask && (
@@ -78,6 +146,15 @@ const App: React.FC = () => {
           task={selectedTask}
           onClose={handleCloseModal}
           onAddComment={handleAddComment}
+          onRemoveTask={handleRemoveTask}
+        />
+      )}
+      {isAddTaskModalOpen && addingTaskToColumn && (
+        <AddTaskModal 
+          isOpen={isAddTaskModalOpen}
+          onClose={handleCloseAddTaskModal}
+          onAddTask={handleAddTask}
+          columnId={addingTaskToColumn}
         />
       )}
     </div>
